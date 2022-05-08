@@ -1,8 +1,13 @@
 const importFeedsInterface = {
     path: feeds_interface_object.path,
+    post: feeds_interface_object.post,
     root : 'import_rss_feed_interface',
+    tmpStorage: {
+        source_url: null,
+
+    },
     style: {
-        app: ['w-100','d-flex','flex-column','justify-content-between'],
+        app: ['w-100','d-flex','flex-column','justify-content-between','position-relative'],
         steps: {
             main: ['w-100','h-50px','d-flex','justify-content-around','position-relative'],
             imgHolder: ['shadow','cursor-not-allowed','w-50px','h-50px','bg-inactive','rounded','d-flex','justify-content-center','align-items-center','flex-column','position-relative','z-index-normal'],
@@ -12,7 +17,8 @@ const importFeedsInterface = {
         },
         footer:{
             main: ['d-flex','justify-content-end'],
-            button: ['btn','bg-active'],
+            next: ['btn','bg-active','ml-3'],
+            previous: ['btn','bg-inactive'],
         },
         content: {
             main: ['w-100','d-flex','h-min-300px','justify-content-center','align-items-center'],
@@ -22,7 +28,7 @@ const importFeedsInterface = {
             },
         },
         neoNotify:{
-            main: ['position-fixed','end-30px','top-30px','cursor-pointer'],
+            main: ['position-absolute','end-30px','top-30px','cursor-pointer'],
             notification:['text-white','p-3','border-radius-5px']
         },
     },
@@ -37,6 +43,7 @@ const importFeedsInterface = {
         return '';
     },
     notify: async ({data,type})=>{
+        const app = document.getElementById(importFeedsInterface.root).querySelector('.inside>div');
         const neoNotify = document.createElement('div');
         neoNotify.onclick = ()=>{
             neoNotify.remove();
@@ -47,7 +54,7 @@ const importFeedsInterface = {
         notification.classList.add(`bg-${type}`);
         notification.innerText = data;
         neoNotify.appendChild(notification);
-        document.body.appendChild(neoNotify);
+        app.appendChild(neoNotify);
         await importFeedsInterface.sleep(1200);
         
         neoNotify.remove();
@@ -60,31 +67,43 @@ const importFeedsInterface = {
     footer: ({step})=>{
         const footer = document.createElement('div');
         footer.className = importFeedsInterface.style.footer.main.join(' ');
-        const button = document.createElement('button');
-        button.type ='button';
-        button.className = importFeedsInterface.style.footer.button.join(' ');
+        const next = document.createElement('button');
+        next.type ='button';
+        next.className = importFeedsInterface.style.footer.next.join(' ');
+        const previous = document.createElement('button');
+        previous.type ='button';
+        previous.className = importFeedsInterface.style.footer.previous.join(' ');
         if(step === 'source'){
-            button.innerText = 'Next';
-            button.addEventListener('click',()=>{
-                const input = document.querySelector('[name="auto-feeds-source_url"]');
+            next.innerText = 'Next';
+            next.addEventListener('click',()=>{
+                const input = document.querySelector('[name="source_url"]');
                 if(input.value.length != 0 && importFeedsInterface.isValidHttpUrl(input.value) ){
+                    importFeedsInterface.tmpStorage['source_url'] = input.value;
+
                     importFeedsInterface.filter_page();
                 }else{
                     importFeedsInterface.notify({data:'Please enter a valid url',type:'danger'});
                 }
             });
+            footer.append(next);
         }else if(step === 'filter'){
-            button.innerText = 'Next';
-            button.addEventListener('click',()=>{
+            next.innerText = 'Next';
+            previous.innerText = 'Previous';
+            previous.addEventListener('click',()=>{
+                importFeedsInterface.source_page();
+            });
+            next.addEventListener('click',()=>{
                 importFeedsInterface.assign_page();
             });
+            footer.append(previous,next);
         }else if(step === 'assign'){
-            button.innerText = 'Next';
-            button.addEventListener('click',()=>{
+            next.innerText = 'Next';
+            next.addEventListener('click',()=>{
                 // save post
             });
+            footer.append(previous,next);
         }
-        footer.append(button);
+        
         return footer;
     },
     content: ({step})=>{
@@ -94,7 +113,10 @@ const importFeedsInterface = {
             const title = document.createElement('h1');
             const subTitle = document.createElement('div');
             const input = document.createElement('input');
-            input.name ='auto-feeds-source_url';
+            input.name ='source_url';
+            if(importFeedsInterface.tmpStorage['source_url']!==undefined){
+                input.value = importFeedsInterface.tmpStorage['source_url'];
+            }
             input.className = importFeedsInterface.style.content.source.input.join(' ');
             title.innerText = 'Feed Sources';
             subTitle.innerText = 'Provide valid source of the feed (i.e http://www.example.com/feed.xml)';
@@ -187,3 +209,4 @@ const importFeedsInterface = {
 };
 importFeedsInterface.init();
 
+console.log(importFeedsInterface.post);

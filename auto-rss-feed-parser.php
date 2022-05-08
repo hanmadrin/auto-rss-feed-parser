@@ -42,6 +42,7 @@ class AutoRssFeedParser {
         add_action('admin_menu',array($this,'register_pages'));
         add_filter('manage_'.$this::$pluginSlug.'_posts_columns', array($this,'custom_columns'));
         add_action( 'init', array($this,'rss_feeds_scraper_post_type') );
+        add_action('save_post', array($this,'rss_feeds_scraper_post_save'));
     }
     //on activation,deactivation and uninstallation rewrite rules are flushed
     function activate(){flush_rewrite_rules();}
@@ -59,19 +60,19 @@ class AutoRssFeedParser {
         remove_submenu_page('edit.php?post_type='.$this::$pluginSlug,'post-new.php?post_type='.$this::$pluginSlug);
     }
     // 
+    function rss_feeds_scraper_post_save($post_id){
+        // if(isset($_POST['rss_feeds_scraper_post_type'])){  
+    }
     function settings_page(){
         echo plugin_dir_url( __FILE__ ) . '/assets/post_new_page.js';
         echo '<div class="wrap">Setting</div>';
     }
-    function register_recipe_meta_boxes(){
-        add_meta_box('import_rss_feed_interface', 'Import Rss Interface', array($this,'recipe_info_display'), $this::$pluginSlug);
-        // add_meta_box('')
+    function rss_feeds_interface(){
+        add_meta_box('import_rss_feed_interface', 'Import Rss Interface', array($this,'rss_feeds_interface_display'), $this::$pluginSlug);
     }
-    function recipe_info_display($post)
+    function rss_feeds_interface_display($post)
     {
         wp_nonce_field(-1, 'import_rss_feed_nonce');
-        $content = '';
-        echo $content;
     }
     function rss_feeds_scraper_post_type() {
         $labels = array(
@@ -108,34 +109,33 @@ class AutoRssFeedParser {
             'publicly_queryable'  => false,
             'capability_type'     => 'post',
             'menu_icon'           => 'dashicons-rss',
-            'register_meta_box_cb'    => array($this,'register_recipe_meta_boxes'),
+            'register_meta_box_cb'    => array($this,'rss_feeds_interface'),
         );
     
         register_post_type( $this::$pluginSlug, $args );
     }
-}
-function import_feeds_actions_edit(){
-    global $post;
-    if($post->post_type == 'rss-feed-scraper'){
-        remove_meta_box( 'submitdiv', 'rss-feed-scraper', 'side' ); 
+    function import_feeds_actions_edit(){
+        global $post;
+        if($post->post_type == 'rss-feed-scraper'){
+            remove_meta_box( 'submitdiv', 'rss-feed-scraper', 'side' ); 
+        }
+    }
+    function import_feeds_interface_script(){
+        global $post;
+        if( 'rss-feed-scraper' == $post->post_type ){
+            wp_enqueue_script( 'import_feeds_interface_js', plugin_dir_url( __FILE__ ).'/assets/js/import_feeds_interface.js',array('jquery'),time(),true );
+            wp_localize_script( 'import_feeds_interface_js', 'feeds_interface_object', 
+                  array( 
+                    'path' => plugin_dir_url( __FILE__ ),
+                    'post' => $post
+                ) 
+            );
+            wp_enqueue_style( 'import_feeds_interface_css', plugin_dir_url( __FILE__ ).'/assets/css/import_feeds_interface.css',null, time(), 'all' );
+        }
     }
 }
-function import_feeds_interface_script(){
-    global $post_type;
-    if( 'rss-feed-scraper' == $post_type ){
-        wp_enqueue_script( 'import_feeds_interface_js', plugin_dir_url( __FILE__ ).'/assets/js/import_feeds_interface.js',array('jquery'),time(),true );
-        wp_localize_script( 'import_feeds_interface_js', 'feeds_interface_object', 
-		  	array( 
-				'path' => plugin_dir_url( __FILE__ ),
-			) 
-		);
-        wp_enqueue_style( 'import_feeds_interface_css', plugin_dir_url( __FILE__ ).'/assets/css/import_feeds_interface.css',null, time(), 'all' );
-    }
-}
-add_action('admin_head-post-new.php', 'import_feeds_actions_edit');
-add_action('admin_head-post.php', 'import_feeds_actions_edit');
-add_action( 'admin_print_scripts-post.php', 'import_feeds_interface_script', 11 );
-add_action( 'admin_print_scripts-post-new.php', 'import_feeds_interface_script', 11 );
+
+
 
 if(class_exists('AutoRssFeedParser')) {
     $auto_rss_feed_parser = new AutoRssFeedParser();
@@ -143,8 +143,12 @@ if(class_exists('AutoRssFeedParser')) {
     register_activation_hook(__FILE__,array($auto_rss_feed_parser,'activate'));
     register_deactivation_hook(__FILE__,array($auto_rss_feed_parser,'deactivate'));
     //register new custom post type
+
+    add_action('admin_head-post-new.php', array($auto_rss_feed_parser,'import_feeds_actions_edit'));
+    add_action('admin_head-post.php', array($auto_rss_feed_parser,'import_feeds_actions_edit'));
+    add_action( 'admin_print_scripts-post.php', array($auto_rss_feed_parser,'import_feeds_interface_script'), 11 );
+    add_action( 'admin_print_scripts-post-new.php', array($auto_rss_feed_parser,'import_feeds_interface_script'), 11 );
     
-    // add_action('add_meta_boxes', array($auto_rss_feed_parser,'register_recipe_meta_boxes'));
     
     
 }
