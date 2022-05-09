@@ -152,7 +152,7 @@ add_action('add_meta_boxes', 'register_recipe_meta_boxes');
 
 function recipe_info_display($post)
 {
-    wp_nonce_field(-1, 'recipe_nonce');
+    wp_nonce_field(-1, '121211');
     $content = '
     <table style="width:100%">
         <tr>

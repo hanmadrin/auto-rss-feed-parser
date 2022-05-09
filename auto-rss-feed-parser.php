@@ -43,6 +43,7 @@ class AutoRssFeedParser {
         add_filter('manage_'.$this::$pluginSlug.'_posts_columns', array($this,'custom_columns'));
         add_action( 'init', array($this,'rss_feeds_scraper_post_type') );
         add_action('save_post', array($this,'rss_feeds_scraper_post_save'));
+        add_action('wp_ajax_get_rss_content', array($this,'get_rss_content') ); 
     }
     //on activation,deactivation and uninstallation rewrite rules are flushed
     function activate(){flush_rewrite_rules();}
@@ -54,14 +55,68 @@ class AutoRssFeedParser {
         // );
         return $columns;
     }
+    function get_rss_content(){
+        if(!wp_verify_nonce($_POST['import_feeds_interface_nonce'], 'import_feeds_interface_nonce')){
+            $res['status'] = 'error';
+            $res['message'] = 'Invalid request';
+            echo json_encode($res);
+            die();
+        }
+        $url = $_POST['source_url'];
+        $contentType = get_headers($url, 1)["Content-Type"];
+        $res =  null;
+        $xmlContentTypes = array('application/xml', 'text/xml', 'application/rss+xml', 'application/atom+xml', 'application/rdf+xml');
+        $jsonContentTypes = array('application/json', 'application/feed+json', 'application/vnd.feed+json');
+        if(in_array($contentType, $xmlContentTypes)){
+            $content = file_get_contents($url);
+            $content = simplexml_load_string($content);
+            $items = array();
+            for($i=0;$i<count($content->channel->item);$i++){
+                $items[$i]= $content->channel->item[$i];
+            }
+            $res['content'] = $items;
+            $res['contentType'] = 'XML';
+            $res['status'] = 'success';
+        }else if(in_array($contentType, $jsonContentTypes)){
+            $content = file_get_contents($url);
+            $content = json_decode($content,true);
+            $records = $content['records'];
+            $res['content'] = $records;
+            $res['contentType'] = 'JSON';
+            $res['status'] = 'success';
+        }else{
+            $res['status'] = 'warning';
+            $res['message'] = 'Content type not supported';
+        }
+        echo json_encode($res);
+        die(); 
+    }
     // add or remove sub menu admin pages
     function register_pages(){
-        add_submenu_page( 'edit.php?post_type='.$this::$pluginSlug, 'RSS Feed Settings', 'Settings', 'manage_options', '', array($this,'settings_page'), null );
-        remove_submenu_page('edit.php?post_type='.$this::$pluginSlug,'post-new.php?post_type='.$this::$pluginSlug);
+        // add_submenu_page( 'edit.php?post_type='.$this::$pluginSlug, 'RSS Feed Settings', 'Settings', 'manage_options', '', array($this,'settings_page'), null );
+        // remove_submenu_page('edit.php?post_type='.$this::$pluginSlug,'post-new.php?post_type='.$this::$pluginSlug);
     }
     // 
     function rss_feeds_scraper_post_save($post_id){
-        // if(isset($_POST['rss_feeds_scraper_post_type'])){  
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+        if(!isset($_POST['import_rss_feed_nonce'])){
+            return;
+        }
+        if (!wp_verify_nonce($_POST['import_rss_feed_nonce'])){
+            return;
+        }
+        if ($this::$pluginSlug == $_POST['post_type']) {
+            if (!current_user_can('edit_page', $post_id))
+                return;
+        } else {
+            if (!current_user_can('edit_post', $post_id))
+                return;
+        }
+        update_post_meta($post_id, 'source_url', $_POST['source_url']);
+        update_post_meta($post_id, 'include_text', isset($_POST['include_text'])?$_POST['include_text']:'');
+        update_post_meta($post_id, 'exclude_text', isset($_POST['exclude_text'])?$_POST['exclude_text']:'');
     }
     function settings_page(){
         echo plugin_dir_url( __FILE__ ) . '/assets/post_new_page.js';
@@ -73,6 +128,8 @@ class AutoRssFeedParser {
     function rss_feeds_interface_display($post)
     {
         wp_nonce_field(-1, 'import_rss_feed_nonce');
+        echo "<div id='import_rss_feed_interface_app'></div>";
+
     }
     function rss_feeds_scraper_post_type() {
         $labels = array(
@@ -123,11 +180,17 @@ class AutoRssFeedParser {
     function import_feeds_interface_script(){
         global $post;
         if( 'rss-feed-scraper' == $post->post_type ){
+            $meta_data['source_url'] = get_post_meta($post->ID, 'source_url', true);
+            $meta_data['include_text'] = get_post_meta($post->ID, 'include_text', true);
+            $meta_data['exclude_text'] = get_post_meta($post->ID, 'exclude_text', true);
+
             wp_enqueue_script( 'import_feeds_interface_js', plugin_dir_url( __FILE__ ).'/assets/js/import_feeds_interface.js',array('jquery'),time(),true );
             wp_localize_script( 'import_feeds_interface_js', 'feeds_interface_object', 
-                  array( 
+                  array(
+                    'ajax_nonce' => wp_create_nonce('import_feeds_interface_nonce'),
+                    'ajax_url' => admin_url( 'admin-ajax.php' ), 
                     'path' => plugin_dir_url( __FILE__ ),
-                    'post' => $post
+                    'meta_data' => $meta_data,
                 ) 
             );
             wp_enqueue_style( 'import_feeds_interface_css', plugin_dir_url( __FILE__ ).'/assets/css/import_feeds_interface.css',null, time(), 'all' );
@@ -142,14 +205,11 @@ if(class_exists('AutoRssFeedParser')) {
     //activation,deactivation and uninstallation hooks are added
     register_activation_hook(__FILE__,array($auto_rss_feed_parser,'activate'));
     register_deactivation_hook(__FILE__,array($auto_rss_feed_parser,'deactivate'));
-    //register new custom post type
-
+    //edit default pages
     add_action('admin_head-post-new.php', array($auto_rss_feed_parser,'import_feeds_actions_edit'));
     add_action('admin_head-post.php', array($auto_rss_feed_parser,'import_feeds_actions_edit'));
+    //add scripts and styles
     add_action( 'admin_print_scripts-post.php', array($auto_rss_feed_parser,'import_feeds_interface_script'), 11 );
     add_action( 'admin_print_scripts-post-new.php', array($auto_rss_feed_parser,'import_feeds_interface_script'), 11 );
-    
-    
-    
 }
 

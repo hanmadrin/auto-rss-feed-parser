@@ -5,6 +5,15 @@
     --theme-color: #39c0ed;
     --active-color: #39c0ed;
     --inactive-color: #ccc;
+
+    --primary-color: #39c0ed;
+    --secondary-color: #ccc;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
 }
 #post-body{margin-right: 0px !important;}
 .w-100{width: 100%;}
@@ -90,6 +99,7 @@
 .mb-3{margin-bottom: 1rem;}
 .mb-4{margin-bottom: 1.5rem;}
 .mb-5{margin-bottom: 3rem;}
+.mt-3{margin-top: 1rem;}
 .mt-4{margin-top: 1.5rem;}
 .mt-5{margin-top: 3rem;}
 .m-2{margin: 0.5rem;}
@@ -98,8 +108,15 @@
 .p-3{padding: 1rem;}
 .p-4{padding: 1.5rem;}
 .p-5{padding: 3rem;}
+.pb-2{padding-bottom: 0.5rem;}
 .pl-3{padding-left: 1rem;}
 .ml-3{margin-left: 1rem;}
+
+
+.fs-12{font-size: 12px;}
+.fs-13{font-size: 13px;}
+.fs-14{font-size: 14px;}
+
 .btn{
     border: none;
     border-radius: 3px;
@@ -144,7 +161,46 @@
     background: -webkit-linear-gradient(left, var(--active-color), var(--active-color) 100%, var(--inactive-color));
 }
 
+.bg-backdrop{background-color: rgba(0,0,0,0.1);}
+.border-solid{border-style: solid;}
+.border-15px{border-width: 15px;}
+.border-5px{border-width: 5px;}
+.border-rounded{border-radius: 50%;}
+.border-top-warning{border-top-color: var(--warning-color);}
+.border-end-success{border-right-color: var(--success-color);}
+.border-bottom-danger{border-bottom-color: var(--danger-color);}
+.border-start-primary{border-left-color: var(--primary-color);}
+.h-120px{height: 120px;}
+.w-120px{width: 120px;}
+.h-60px{height: 60px;}
+.w-60px{width: 60px;}
 
+.animate-spin-linear-infinite-1s{
+    animation: spin linear infinite 1s;
+    -webkit-animation: spin linear infinite 1s;
+}
+@-webkit-keyframes spin {
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.w-100m10px{width: calc(100% - 10px)}
+.p-5px{padding: 5px;}
+.w100m20px{width: calc(100% - 20px)}
+.m-10px{margin: 10px;}
+.mn-10px{margin: -10px;}
+.h-100p20px{height: calc(100% + 20px)}
+.w-100p20px{width: calc(100% + 20px)}
 #import_rss_feed_interface .handle-actions{
+    display:none;
+}
+#import_rss_feed_interface div.inside{
+    margin: 0;
+    padding:0;
+}
+#side-sortables{
     display:none;
 }
