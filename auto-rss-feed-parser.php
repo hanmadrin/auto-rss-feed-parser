@@ -53,6 +53,7 @@ class AutoRssFeedParser {
         // $columns = array(
         //     'cb' => '<input type="checkbox" />',
         // );
+        // echo json_encode($columns);
         return $columns;
     }
     function get_rss_content(){
@@ -71,6 +72,12 @@ class AutoRssFeedParser {
             $content = file_get_contents($url);
             $content = simplexml_load_string($content);
             $items = array();
+            if(count($content->channel->item)==0){
+                $res['status'] = 'danger';
+                $res['message'] = "Couldn't find any post from source";
+                echo json_encode($res);
+                die();
+            }
             for($i=0;$i<count($content->channel->item);$i++){
                 $items[$i]= $content->channel->item[$i];
             }
@@ -81,6 +88,12 @@ class AutoRssFeedParser {
             $content = file_get_contents($url);
             $content = json_decode($content,true);
             $records = $content['records'];
+            if(count($records)==0){
+                $res['status'] = 'danger';
+                $res['message'] = "Couldn't find any post from source";
+                echo json_encode($res);
+                die();
+            }
             $res['content'] = $records;
             $res['contentType'] = 'JSON';
             $res['status'] = 'success';
@@ -115,8 +128,10 @@ class AutoRssFeedParser {
                 return;
         }
         update_post_meta($post_id, 'source_url', $_POST['source_url']);
+        update_post_meta($post_id, 'source_type', isset($_POST['source_type'])?$_POST['source_type']:'');
         update_post_meta($post_id, 'include_text', isset($_POST['include_text'])?$_POST['include_text']:'');
         update_post_meta($post_id, 'exclude_text', isset($_POST['exclude_text'])?$_POST['exclude_text']:'');
+        
     }
     function settings_page(){
         echo plugin_dir_url( __FILE__ ) . '/assets/post_new_page.js';
@@ -173,20 +188,22 @@ class AutoRssFeedParser {
     }
     function import_feeds_actions_edit(){
         global $post;
-        if($post->post_type == 'rss-feed-scraper'){
-            remove_meta_box( 'submitdiv', 'rss-feed-scraper', 'side' ); 
+        if($post->post_type == $this::$pluginSlug){
+            remove_meta_box( 'submitdiv', $this::$pluginSlug, 'side' ); 
         }
     }
     function import_feeds_interface_script(){
         global $post;
-        if( 'rss-feed-scraper' == $post->post_type ){
+        if( $this::$pluginSlug == $post->post_type ){
             $meta_data['source_url'] = get_post_meta($post->ID, 'source_url', true);
+            $meta_data['source_type'] = get_post_meta($post->ID, 'source_type', true);
             $meta_data['include_text'] = get_post_meta($post->ID, 'include_text', true);
             $meta_data['exclude_text'] = get_post_meta($post->ID, 'exclude_text', true);
 
             wp_enqueue_script( 'import_feeds_interface_js', plugin_dir_url( __FILE__ ).'/assets/js/import_feeds_interface.js',array('jquery'),time(),true );
             wp_localize_script( 'import_feeds_interface_js', 'feeds_interface_object', 
                   array(
+                    'post_slug' =>$this::$pluginSlug,
                     'ajax_nonce' => wp_create_nonce('import_feeds_interface_nonce'),
                     'ajax_url' => admin_url( 'admin-ajax.php' ), 
                     'path' => plugin_dir_url( __FILE__ ),

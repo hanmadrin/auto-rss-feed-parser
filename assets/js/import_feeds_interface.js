@@ -3,9 +3,11 @@ const importFeedsInterface = {
     // meta_data: feeds_interface_object.meta_data,
     ajax_url: feeds_interface_object.ajax_url,
     ajax_nonce: feeds_interface_object.ajax_nonce,
+    post_slug: feeds_interface_object.post_slug,
     root : 'import_rss_feed_interface_app',
     formInputs: {
         source_url: feeds_interface_object.meta_data.source_url,
+        source_type: feeds_interface_object.meta_data.source_type,
         include_text: feeds_interface_object.meta_data.include_text,
         exclude_text: feeds_interface_object.meta_data.exclude_text,
     },
@@ -35,6 +37,11 @@ const importFeedsInterface = {
                 input: ['p-2','w-100','border-radius-5px'],
                 subTitle: ['mt-3','pb-2','fs-13']
             },
+            assign:{
+                dynContent: ['my-2','p-2','w-100'],
+                input: ['p-2','w-100','border-radius-5px'],
+                subTitle: ['mt-3','pb-2','fs-13']
+            }
         },
         neoNotify:{
             main: ['position-absolute','end-30px','top-30px','cursor-pointer'],
@@ -120,8 +127,9 @@ const importFeedsInterface = {
                         return res.json();
                     }).then(data=>{
                         console.log(data);
-                        importFeedsInterface.rss_contents = data;
                         if(data.status === 'success'){
+                            importFeedsInterface.rss_contents = data;
+                            importFeedsInterface.formInputs.source_type = importFeedsInterface.rss_contents.contentType;
                             importFeedsInterface.page({step:'filter'});
                         }else{
                             importFeedsInterface.notify({data:data.message,type:data.status});
@@ -160,6 +168,7 @@ const importFeedsInterface = {
             next.className = importFeedsInterface.style.footer.save.join(' ');
             next.addEventListener('click',(event)=>{
                 //update assign table values to formInputs
+                jQuery(window).off( 'beforeunload.edit-post' );
                 const app = document.getElementById(importFeedsInterface.root);
                 event.preventDefault();
                 importFeedsInterface.page({step:'assign'});
@@ -208,7 +217,7 @@ const importFeedsInterface = {
             const includeSubTitle = document.createElement('div');
             const excludeSubTitle = document.createElement('div');
             title.innerText = 'Feed Filters ';
-            subTitle.innerText = `Detected ${importFeedsInterface.rss_contents.contentType} feeds from the source( ${importFeedsInterface.rss_contents.content.length} posts)`;
+            subTitle.innerText = `Detected ${importFeedsInterface.rss_contents.content.length} posts from ${importFeedsInterface.rss_contents.contentType} feeds source.`;
             subTitle.className = importFeedsInterface.style.content.filter.subTitle.join(' ');
             title.append(subTitle);
             include.name = 'include_text';
@@ -225,7 +234,14 @@ const importFeedsInterface = {
             excludeSubTitle.className = importFeedsInterface.style.content.filter.subTitle.join(' ');
             dynContent.append(title,includeSubTitle,include,excludeSubTitle,exclude);
         }else if(step === 'assign'){
-            
+            dynContent.className = importFeedsInterface.style.content.assign.dynContent.join(' ');
+            const title = document.createElement('h1');
+            const subTitle = document.createElement('span');
+            const table = document.createElement('table');
+            //thead
+            const headRow = document.createElement('tr');
+            // const  = document.createElement('th');
+
         }
         return dynContent;
     },
